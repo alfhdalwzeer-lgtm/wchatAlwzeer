@@ -13,8 +13,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'الوزير شات',
       theme: ThemeData(
-        primarySwatch: Colors.teal,
-        fontFamily: 'sans-serif',
+        primarySwatch: Colors.green,
+        scaffoldBackgroundColor: const Color(0xFF0F2B1D),
       ),
       builder: (context, child) {
         return Directionality(
@@ -22,30 +22,57 @@ class MyApp extends StatelessWidget {
           child: child!,
         );
       },
-      home: const HomeScreen(),
+      home: const SplashScreen(),
     );
   }
 }
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class SplashScreen extends StatelessWidget {
+  const SplashScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('الوزير شات'),
-        centerTitle: true,
-      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.chat_bubble_outline, size: 80, color: Colors.teal),
-            SizedBox(height: 16),
-            Text(
-              'مرحباً بك في تطبيق الوزير شات!',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.green.shade900,
+                shape: BoxShape.circle,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.amber,
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                  )
+                ],
+              ),
+              child: const Icon(
+                Icons.king_bed, // أو استخدام أيقونة التاج
+                size: 90,
+                color: Colors.amber,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'wchatAlwzeer',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.amber,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'برنامج المراسلات الأسرع في العالم',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.white70,
+              ),
             ),
           ],
         ),
