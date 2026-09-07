@@ -30,7 +30,8 @@ jobs:
         run: flutter pub get
 
       - name: Create Android project structure
-        run: flutter create . --platforms=android
+        
+        run: flutter create . --platforms=android --project-name wchatalwzeer
 
       - name: Set minSdkVersion
         run: sed -i 's/flutter.minSdkVersion/23/' android/app/build.gradle
