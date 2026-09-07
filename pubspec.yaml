@@ -35,6 +35,13 @@ flutter:
   uses-material-design: true
   assets:
     - crown.png
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  cloud_firestore: ^4.15.5
+  firebase_auth: ^4.17.8
   intl_phone_number_input: ^0.7.4
   flutter_contacts: ^1.1.7
   shared_preferences: ^2.2.2
