@@ -11,19 +11,43 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Al-Wazir Chat',
+      title: 'الوزير شات',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.teal,
+        fontFamily: 'sans-serif',
       ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Al-Wazir Chat'),
-        ),
-        body: const Center(
-          child: Text(
-            'Welcome to Al-Wazir Chat!',
-            style: TextStyle(fontSize: 20),
-          ),
+      builder: (context, child) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: child!,
+        );
+      },
+      home: const HomeScreen(),
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('الوزير شات'),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.chat_bubble_outline, size: 80, color: Colors.teal),
+            SizedBox(height: 16),
+            Text(
+              'مرحباً بك في تطبيق الوزير شات!',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
       ),
     );
