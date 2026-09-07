@@ -1,19 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // 1. حفظ جلسة التسجيل محلياً لمنع الخروج التلقائي
-  Future<void> keepUserLoggedIn(bool isLoggedIn) async {
+  // 1. حفظ جلسة الدخول لمنع الخروج التلقائي
+  Future<void> setLoggedIn(bool status) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_logged_in', isLoggedIn);
+    await prefs.setBool('is_logged_in', status);
   }
 
-  // 2. تحديث حالة المتصل، وجاري الكتابة، وآخر ظهور
-  Future<void> updatePresence({required bool isOnline, bool isTyping = false}) async {
+  // 2. تحديث متصل / جاري الكتابة / آخر ظهور
+  Future<void> updatePresence(bool isOnline, {bool isTyping = false}) async {
     final user = _auth.currentUser;
     if (user != null) {
       await _firestore.collection('users').doc(user.uid).set({
@@ -24,8 +25,8 @@ class ChatService {
     }
   }
 
-  // 3. إرسال الرسائل مع حالة التسليم (✓ sent, ✓✓ delivered, ✓✓ read)
-  Future<void> sendMessage(String receiverId, String messageText) async {
+  // 3. إرسال رسالة مع صح الاستلام والقراءة (✓ sent, ✓✓ delivered, ✓✓ read)
+  Future<void> sendMessage(String receiverId, String text) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
@@ -40,46 +41,42 @@ class ChatService {
         .add({
       'senderId': user.uid,
       'receiverId': receiverId,
-      'message': messageText,
+      'message': text,
       'timestamp': FieldValue.serverTimestamp(),
-      'status': 'sent', // 'sent' = ✓, 'delivered' = ✓✓, 'read' = ✓✓ (blue)
+      'status': 'sent', // sent = ✓ , read = ✓✓ أزرق
     });
   }
 
-  // 4. تحديث الرسائل إلى قُدِمَت / قُرِئَت (✓✓ أزرق)
-  Future<void> markAsRead(String chatRoomId, String messageDocId) async {
+  // 4. تحديث حالة الرسالة إلى مقروءة (✓✓ أزرق)
+  Future<void> markAsRead(String chatRoomId, String messageId) async {
     await _firestore
         .collection('chat_rooms')
         .doc(chatRoomId)
         .collection('messages')
-        .doc(messageDocId)
+        .doc(messageId)
         .update({'status': 'read'});
   }
 
-  // 5. إضافة حالة (Story) تنتهي تلقائياً بعد 24 ساعة
-  Future<void> postStatus(String textContent, {String imageUrl = ''}) async {
+  // 5. إضافة حالة 24 ساعة
+  Future<void> addStatus(String text) async {
     final user = _auth.currentUser;
     if (user != null) {
       final now = DateTime.now();
-      final expiryTime = now.add(const Duration(hours: 24));
-
       await _firestore.collection('statuses').add({
         'userId': user.uid,
         'userPhone': user.phoneNumber ?? '',
-        'text': textContent,
-        'imageUrl': imageUrl,
+        'text': text,
         'createdAt': Timestamp.fromDate(now),
-        'expiresAt': Timestamp.fromDate(expiryTime),
+        'expiresAt': Timestamp.fromDate(now.add(const Duration(hours: 24))),
       });
     }
   }
 
-  // 6. جلب الحالات النشطة فقط (خلال الـ 24 ساعة الماضية)
-  Stream<QuerySnapshot> getActiveStatuses() {
-    return _firestore
-        .collection('statuses')
-        .where('expiresAt', isGreaterThan: Timestamp.now())
-        .orderBy('expiresAt', descending: true)
-        .snapshots();
+  // 6. مزامنة جهات الاتصال
+  Future<List<Contact>> syncContacts() async {
+    if (await FlutterContacts.requestPermission()) {
+      return await FlutterContacts.getContacts(withProperties: true);
+    }
+    return [];
   }
 }
