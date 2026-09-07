@@ -32,7 +32,11 @@ jobs:
       #- name: Generate App Icons
       #  run: flutter pub run flutter_launcher_icons
 
+      - name: Build APK      - name: Create Android project structure
+        run: flutter create . --platforms=android
+
       - name: Build APK
+        run: flutter build apk --release
         run: flutter build apk --release
 
       - name: Upload APK Artifact
