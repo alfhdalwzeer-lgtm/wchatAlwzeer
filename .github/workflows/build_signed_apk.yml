@@ -28,16 +28,14 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
-
       - name: Create Android project structure
-        
         run: flutter create . --platforms=android --project-name wchatalwzeer
 
       - name: Set minSdkVersion
         run: sed -i 's/flutter.minSdkVersion/23/' android/app/build.gradle
+
       - name: Update Kotlin version
         run: sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = '\''1.9.0'\''/' android/build.gradle
-
 
       - name: Build APK
         run: flutter build apk --release
