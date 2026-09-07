@@ -30,7 +30,7 @@ jobs:
         run: flutter pub get
 
       - name: Create Android project structure
-        run: flutter create . --platforms=android
+        run: flutter create . --platforms=android --project-name=wchatalwzeer
 
       - name: Build APK
         run: flutter build apk --release
