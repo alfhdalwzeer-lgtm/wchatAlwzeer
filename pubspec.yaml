@@ -11,6 +11,9 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
+  image_picker: ^1.0.7
+  shared_preferences: ^2.2.2
+  intl_phone_field: ^3.2.0
 
 dev_dependencies:
   flutter_test:
