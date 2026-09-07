@@ -23,7 +23,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.22.0'
           channel: 'stable'
 
       - name: Install dependencies
@@ -32,13 +32,10 @@ jobs:
       - name: Create Android project structure
         run: flutter create . --platforms=android --project-name wchatalwzeer
 
-      - name: Set minSdkVersion
-        run: sed -i 's/flutter.minSdkVersion/23/' android/app/build.gradle
-
-      - name: Update Kotlin version
+      - name: Set minSdkVersion and Kotlin Version
         run: |
-          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = '\''1.9.10'\''/' android/build.gradle 2>/dev/null || true
-          sed -i 's/id "org.jetbrains.kotlin.android" version .*/id "org.jetbrains.kotlin.android" version "1.9.10" apply false/' android/settings.gradle 2>/dev/null || true
+          echo "ext.kotlin_version = '1.9.20'" >> android/build.gradle
+          sed -i 's/flutter.minSdkVersion/23/' android/app/build.gradle
 
       - name: Build APK
         run: flutter build apk --release
