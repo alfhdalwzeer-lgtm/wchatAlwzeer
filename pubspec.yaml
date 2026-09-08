@@ -10,6 +10,9 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
+  image_picker: ^1.0.7      # ميزة التقاط الصور بالكاميرا
+  record: ^5.0.0            # ميزة التسجيل الصوتي
+  path_provider: ^2.1.2     # حفظ الملفات الصوتية
 
 dev_dependencies:
   flutter_test:
@@ -18,4 +21,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-crown.png##
