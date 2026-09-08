@@ -148,3 +148,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 }
+<meta-data
+    android:name="flutterEmbedding"
+    android:value="2" />
+
