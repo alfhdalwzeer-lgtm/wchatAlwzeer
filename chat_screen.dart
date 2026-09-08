@@ -12,6 +12,8 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _textController = TextEditingController();
+  bool _isRecording = false;
+  
   final List<Message> _messages = [
     Message(
       id: '1',
@@ -20,29 +22,40 @@ class _ChatScreenState extends State<ChatScreen> {
       timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
       status: MessageStatus.read,
     ),
-    Message(
-      id: '2',
-      senderId: 'me',
-      text: 'تم تفعيل علامات الصح الذهبية ✔️✔️',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 2)),
-      status: MessageStatus.read,
-    ),
   ];
 
-  void _sendMessage() {
-    if (_textController.text.trim().isEmpty) return;
+  void _sendMessage({String? text, String? mediaType}) {
+    final msgText = text ?? _textController.text.trim();
+    if (msgText.isEmpty) return;
+
     setState(() {
       _messages.add(
         Message(
           id: DateTime.now().toString(),
           senderId: 'me',
-          text: _textController.text.trim(),
+          text: msgText,
           timestamp: DateTime.now(),
           status: MessageStatus.sent,
         ),
       );
     });
     _textController.clear();
+  }
+
+  // محاكاة التقاط صورة بالكاميرا
+  void _openCamera() {
+    _sendMessage(text: "📷 [صورة من الكاميرا]");
+  }
+
+  // محاكاة تسجيل واسترجاع الصوتي
+  void _toggleVoiceRecord() {
+    setState(() {
+      _isRecording = !_isRecording;
+    });
+
+    if (!_isRecording) {
+      _sendMessage(text: "🎤 [تسجيل صوتي 0:05]");
+    }
   }
 
   @override
@@ -53,7 +66,10 @@ class _ChatScreenState extends State<ChatScreen> {
         backgroundColor: const Color(0xFF1E232A),
         title: Text(widget.userName, style: const TextStyle(color: Color(0xFFD4AF37))),
         actions: [
-          IconButton(icon: const Icon(Icons.videocam, color: Color(0xFFD4AF37)), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.camera_alt, color: Color(0xFFD4AF37)),
+            onPressed: _openCamera,
+          ),
           IconButton(icon: const Icon(Icons.call, color: Color(0xFFD4AF37)), onPressed: () {}),
         ],
       ),
@@ -74,14 +90,17 @@ class _ChatScreenState extends State<ChatScreen> {
             color: const Color(0xFF1E232A),
             child: Row(
               children: [
-                IconButton(icon: const Icon(Icons.attach_file, color: Color(0xFFD4AF37)), onPressed: () {}),
+                IconButton(
+                  icon: const Icon(Icons.camera_alt_outlined, color: Color(0xFFD4AF37)),
+                  onPressed: _openCamera,
+                ),
                 Expanded(
                   child: TextField(
                     controller: _textController,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: "اكتب رسالة...",
-                      hintStyle: const TextStyle(color: Colors.grey),
+                      hintText: _isRecording ? "جاري التسجيل الصوتي..." : "اكتب رسالة...",
+                      hintStyle: TextStyle(color: _isRecording ? const Color(0xFFD4AF37) : Colors.grey),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
                       fillColor: const Color(0xFF2C3038),
                       filled: true,
@@ -91,8 +110,20 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 6),
                 CircleAvatar(
-                  backgroundColor: const Color(0xFFD4AF37),
-                  child: IconButton(icon: const Icon(Icons.send, color: Colors.black), onPressed: _sendMessage),
+                  backgroundColor: _isRecording ? Colors.red : const Color(0xFFD4AF37),
+                  child: IconButton(
+                    icon: Icon(
+                      _textController.text.isEmpty ? (_isRecording ? Icons.stop : Icons.mic) : Icons.send,
+                      color: Colors.black,
+                    ),
+                    onPressed: () {
+                      if (_textController.text.isNotEmpty) {
+                        _sendMessage();
+                      } else {
+                        _toggleVoiceRecord();
+                      }
+                    },
+                  ),
                 ),
               ],
             ),
