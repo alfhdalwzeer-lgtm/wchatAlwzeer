@@ -1,5 +1,5 @@
 name: wchat_alwzeer
-description: "A messaging application - wchatAlwzeer"
+description: "A fresh messaging app - wchatAlwzeer"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -18,5 +18,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - crown.png
