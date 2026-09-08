@@ -34,5 +34,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-  flutter_launcher_icons
-    - crown.png
+  flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "crown.png"
