@@ -12,370 +12,138 @@ class AlWazirChatApp extends StatelessWidget {
     return MaterialApp(
       title: 'Al-Wazir Chat',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: const Color(0xFF128C7E),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF128C7E),
-          secondary: const Color(0xFF25D366),
-        ),
-        useMaterial3: true,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        primaryColor: const Color(0xFFFFD700),
       ),
-      home: const LoginScreen(),
+      home: const ChatScreen(),
     );
   }
 }
 
-// ---------------- 1. شاشة التسجيل ----------------
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class ChatScreen extends StatefulWidget {
+  const ChatScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _phoneController = TextEditingController();
-  final _nameController = TextEditingController();
-
-  void _login() {
-    if (_phoneController.text.isNotEmpty && _nameController.text.isNotEmpty) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(userName: _nameController.text),
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.chat_bubble_rounded, size: 80, color: Color(0xFF128C7E)),
-            const SizedBox(height: 16),
-            const Text(
-              'Al-Wazir Chat',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 32),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'الاسم الكامل',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'رقم الهاتف',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.phone),
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF128C7E),
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: _login,
-                child: const Text('دخول / تسجيل', style: TextStyle(fontSize: 18)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------- 2. شاشة قائمة المحادثات ----------------
-class HomeScreen extends StatelessWidget {
-  final String userName;
-  const HomeScreen({super.key, required this.userName});
-
-  @override
-  Widget build(BuildContext context) {
-    final names = ['م. صادق', 'خالد حسن', 'فريق الدعم', 'أحمد علي', 'محمد حسين'];
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF128C7E),
-        foregroundColor: Colors.white,
-        title: Text('Al-Wazir Chat ($userName)'),
-        actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
-        ],
-      ),
-      body: ListView.builder(
-        itemCount: names.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundColor: const Color(0xFF128C7E),
-              child: Text(
-                names[index][0],
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-            title: Text(names[index]),
-            subtitle: const Text('رسالة نصية أو تسجيل صوتي'),
-            trailing: const Text('10:30 ص'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChatDetailScreen(contactName: names[index]),
-                ),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF25D366),
-        child: const Icon(Icons.chat, color: Colors.white),
-        onPressed: () {},
-      ),
-    );
-  }
-}
-
-// ---------------- 3. شاشة المحادثة الرئيسية ----------------
-class ChatDetailScreen extends StatefulWidget {
-  final String contactName;
-  const ChatDetailScreen({super.key, required this.contactName});
-
-  @override
-  State<ChatDetailScreen> createState() => _ChatDetailScreenState();
-}
-
-class _ChatDetailScreenState extends State<ChatDetailScreen> {
+class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, dynamic>> _messages = [
-    {'text': 'أهلاً بك في Al-Wazir Chat!', 'isMe': false, 'type': 'text'},
+    {
+      'text': 'أهلاً بك في Al-Wazir Chat! تم تحديث تصميم فقاعات المحادثة.',
+      'isMe': false,
+      'time': '10:00 ص',
+    },
+    {
+      'text': 'تصميم رائع باللون الذهبي والأسود!',
+      'isMe': true,
+      'time': '10:02 ص',
+    },
   ];
 
-  final _textController = TextEditingController();
-  bool _isRecording = false;
+  final TextEditingController _controller = TextEditingController();
 
   void _sendMessage() {
-    if (_textController.text.trim().isNotEmpty) {
-      setState(() {
-        _messages.add({
-          'text': _textController.text,
-          'isMe': true,
-          'type': 'text',
-        });
-        _textController.clear();
-      });
-    }
-  }
-
-  void _toggleRecording() {
+    if (_controller.text.trim().isEmpty) return;
     setState(() {
-      _isRecording = !_isRecording;
-      if (!_isRecording) {
-        _messages.add({
-          'text': 'مقطع صوتي (0:05)',
-          'isMe': true,
-          'type': 'audio',
-        });
-      }
+      _messages.add({
+        'text': _controller.text.trim(),
+        'isMe': true,
+        'time': '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+      });
+      _controller.clear();
     });
   }
 
-  void _startCall(bool isVideo) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CallScreen(
-          contactName: widget.contactName,
-          isVideo: isVideo,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF128C7E),
-        foregroundColor: Colors.white,
-        titleSpacing: 0,
+        backgroundColor: const Color(0xFF1E1E1E),
         title: Row(
-          children: [
-            CircleAvatar(
-              child: Text(widget.contactName[0]),
-            ),
-            const SizedBox(width: 8),
-            Text(widget.contactName, style: const TextStyle(fontSize: 18)),
+          children: const [
+            Text('👑 ', style: TextStyle(fontSize: 20)),
+            Text('Al-Wazir Chat', style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.videocam),
-            onPressed: () => _startCall(true),
-          ),
-          IconButton(
-            icon: const Icon(Icons.call),
-            onPressed: () => _startCall(false),
-          ),
+          IconButton(icon: const Icon(Icons.call, color: Color(0xFFFFD700)), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.videocam, color: Color(0xFFFFD700)), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.more_vert, color: Colors.white), onPressed: () {}),
         ],
       ),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final msg = _messages[index];
                 return Align(
                   alignment: msg['isMe'] ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    margin: const EdgeInsets.symmetric(vertical: 5),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: msg['isMe'] ? const Color(0xFFDCF8C6) : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+                      color: msg['isMe'] ? const Color(0xFF2C2518) : const Color(0xFF242424),
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: Radius.circular(msg['isMe'] ? 16 : 0),
+                        bottomRight: Radius.circular(msg['isMe'] ? 0 : 16),
+                      ),
+                      border: Border.all(
+                        color: msg['isMe'] ? const Color(0xFFFFD700).withOpacity(0.4) : Colors.transparent,
+                        width: 1,
+                      ),
                     ),
-                    child: msg['type'] == 'audio'
-                        ? const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.play_arrow, color: Color(0xFF128C7E)),
-                              SizedBox(width: 8),
-                              Text('تسجيل صوتي'),
-                            ],
-                          )
-                        : Text(msg['text'], style: const TextStyle(fontSize: 16)),
+                    child: Column(
+                      crossAxisAlignment: msg['isMe'] ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          msg['text'],
+                          style: const TextStyle(color: Colors.white, fontSize: 15),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          msg['time'],
+                          style: TextStyle(color: Colors.grey[500], fontSize: 10),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            color: Colors.grey[200],
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            color: const Color(0xFF1E1E1E),
             child: Row(
               children: [
-                IconButton(
-                  icon: Icon(_isRecording ? Icons.stop : Icons.mic),
-                  color: _isRecording ? Colors.red : const Color(0xFF128C7E),
-                  onPressed: _toggleRecording,
-                ),
+                IconButton(icon: const Icon(Icons.camera_alt, color: Color(0xFFFFD700)), onPressed: () {}),
+                IconButton(icon: const Icon(Icons.image, color: Color(0xFFFFD700)), onPressed: () {}),
                 Expanded(
                   child: TextField(
-                    controller: _textController,
+                    controller: _controller,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       hintText: 'اكتب رسالة...',
+                      hintStyle: TextStyle(color: Colors.grey),
                       border: InputBorder.none,
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send, color: Color(0xFF128C7E)),
+                  icon: const Icon(Icons.send, color: Color(0xFFFFD700)),
                   onPressed: _sendMessage,
                 ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ---------------- 4. شاشة المكالمات الصوتية والمصورة ----------------
-class CallScreen extends StatefulWidget {
-  final String contactName;
-  final bool isVideo;
-  const CallScreen({super.key, required this.contactName, required this.isVideo});
-
-  @override
-  State<CallScreen> createState() => _CallScreenState();
-}
-
-class _CallScreenState extends State<CallScreen> {
-  bool _isMuted = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.blueGrey[900],
-      body: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const SizedBox(height: 20),
-            Column(
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: const Color(0xFF128C7E),
-                  child: Text(
-                    widget.contactName[0],
-                    style: const TextStyle(fontSize: 40, color: Colors.white),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  widget.contactName,
-                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.isVideo ? 'مكالمة فيديو جارية...' : 'مكالمة صوتية جارية...',
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 40),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  FloatingActionButton(
-                    heroTag: 'btnMute',
-                    backgroundColor: _isMuted ? Colors.white : Colors.white24,
-                    onPressed: () {
-                      setState(() {
-                        _isMuted = !_isMuted;
-                      });
-                    },
-                    child: Icon(
-                      _isMuted ? Icons.mic_off : Icons.mic,
-                      color: _isMuted ? Colors.black : Colors.white,
-                    ),
-                  ),
-                  FloatingActionButton(
-                    heroTag: 'btnEnd',
-                    backgroundColor: Colors.red,
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Icon(Icons.call_end, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
