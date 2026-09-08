@@ -1,7 +1,6 @@
-name: wchatalwzeer
-description: "Al-Wazir Chat Application"
+name: wchat_alwzeer
+description: "A messaging application - wchatAlwzeer"
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -10,21 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  cupertino_icons: ^1.0.8
-  image_picker: ^1.0.7
-  shared_preferences: ^2.2.2
-  cloud_firestore: ^4.15.8
-  firebase_auth: ^4.17.8
-  firebase_core: ^2.27.0
-  firebase_database: ^10.4.8
-  firebase_storage: ^11.6.9
-  intl_phone_number_input: ^0.7.4
-  flutter_contacts: ^1.1.7
-  record: ^5.1.2
-  audioplayers: ^6.0.0
-  permission_handler: ^11.3.1
-  intl: ^0.19.0
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:
