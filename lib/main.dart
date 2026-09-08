@@ -1,144 +1,191 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const AlWazirChatApp());
+  runApp(const WchatAlwzeerApp());
 }
 
-class AlWazirChatApp extends StatelessWidget {
-  const AlWazirChatApp({super.key});
+class WchatAlwzeerApp extends StatelessWidget {
+  const WchatAlwzeerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Al-Wazir Chat',
+      title: 'wchatAlwzeer',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        primaryColor: const Color(0xFFFFD700),
+      theme: ThemeData(
+        primaryColor: const Color(0xFF075E54),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF075E54),
+          secondary: const Color(0xFF25D366),
+        ),
+        useMaterial3: false,
       ),
-      home: const ChatScreen(),
+      home: const MainHomeScreen(),
     );
   }
 }
 
-class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+class MainHomeScreen extends StatefulWidget {
+  const MainHomeScreen({super.key});
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  State<MainHomeScreen> createState() => _MainHomeScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'text': 'أهلاً بك في Al-Wazir Chat! تم تحديث تصميم فقاعات المحادثة.',
-      'isMe': false,
-      'time': '10:00 ص',
-    },
-    {
-      'text': 'تصميم رائع باللون الذهبي والأسود!',
-      'isMe': true,
-      'time': '10:02 ص',
-    },
-  ];
+class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
 
-  final TextEditingController _controller = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this, initialIndex: 1);
+  }
 
-  void _sendMessage() {
-    if (_controller.text.trim().isEmpty) return;
-    setState(() {
-      _messages.add({
-        'text': _controller.text.trim(),
-        'isMe': true,
-        'time': '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-      });
-      _controller.clear();
-    });
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text('wchatAlwzeer'),
+        backgroundColor: const Color(0xFF075E54),
+        actions: [
+          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          tabs: const [
+            Tab(icon: Icon(Icons.camera_alt)),
+            Tab(text: "دردشات"),
+            Tab(text: "الحالة"),
+            Tab(text: "المكالمات"),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          const Center(child: Text("الكاميرا")),
+          const ChatsTab(),
+          const Center(child: Text("الحالات")),
+          const Center(child: Text("سجل المكالمات")),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF25D366),
+        child: const Icon(Icons.message, color: Colors.white),
+        onPressed: () {},
+      ),
+    );
+  }
+}
+
+class ChatsTab extends StatelessWidget {
+  const ChatsTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: 5,
+      itemBuilder: (context, index) {
+        return ListTile(
+          leading: CircleAvatar(
+            backgroundColor: const Color(0xFF075E54),
+            child: Image.asset('crown.png', errorBuilder: (c, e, s) => const Icon(Icons.person, color: Colors.white)),
+          ),
+          title: Text("مستخدم ${index + 1}", style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: const Text("مرحباً بك في تطبيق wchatAlwzeer"),
+          trailing: const Text("12:00 م", style: TextStyle(color: Colors.grey, fontSize: 12)),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ChatDetailScreen(userName: "مستخدم ${index + 1}")),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class ChatDetailScreen extends StatelessWidget {
+  final String userName;
+  const ChatDetailScreen({super.key, required this.userName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF075E54),
+        titleSpacing: 0,
         title: Row(
-          children: const [
-            Text('👑 ', style: TextStyle(fontSize: 20)),
-            Text('Al-Wazir Chat', style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold)),
+          children: [
+            const CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.white24,
+              child: Icon(Icons.person, color: Colors.white),
+            ),
+            const SizedBox(width: 10),
+            Text(userName),
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.call, color: Color(0xFFFFD700)), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.videocam, color: Color(0xFFFFD700)), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.more_vert, color: Colors.white), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.videocam), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.call), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(10),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                return Align(
-                  alignment: msg['isMe'] ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 5),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: msg['isMe'] ? const Color(0xFF2C2518) : const Color(0xFF242424),
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: Radius.circular(msg['isMe'] ? 16 : 0),
-                        bottomRight: Radius.circular(msg['isMe'] ? 0 : 16),
-                      ),
-                      border: Border.all(
-                        color: msg['isMe'] ? const Color(0xFFFFD700).withOpacity(0.4) : Colors.transparent,
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: msg['isMe'] ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          msg['text'],
-                          style: const TextStyle(color: Colors.white, fontSize: 15),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          msg['time'],
-                          style: TextStyle(color: Colors.grey[500], fontSize: 10),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            color: const Color(0xFF1E1E1E),
-            child: Row(
-              children: [
-                IconButton(icon: const Icon(Icons.camera_alt, color: Color(0xFFFFD700)), onPressed: () {}),
-                IconButton(icon: const Icon(Icons.image, color: Color(0xFFFFD700)), onPressed: () {}),
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: 'اكتب رسالة...',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      border: InputBorder.none,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: const [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Card(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Text("أهلاً بك! كيف يمكنني مساعدتك؟"),
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Color(0xFFFFD700)),
-                  onPressed: _sendMessage,
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(8),
+            color: Colors.grey[200],
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: "اكتب رسالة...",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: BorderSide.none,
+                      ),
+                      fillColor: Colors.white,
+                      filled: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  backgroundColor: const Color(0xFF075E54),
+                  child: IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: () {},
+                  ),
                 ),
               ],
             ),
