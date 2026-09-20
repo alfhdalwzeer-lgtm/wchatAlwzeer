@@ -12,6 +12,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
 
   String _countryCode = '+967';
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -19,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
+  Future<void> _login() async {
     final phone = _phoneController.text.trim();
 
     if (phone.isEmpty) {
@@ -34,6 +35,16 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    setState(() {
+      _isLoading = true;
+    });
+
+    // انتقال مؤقت للواجهة الرئيسية.
+    // لاحقًا سنربطه بتسجيل الدخول الحقيقي وحفظ الحساب.
+    await Future.delayed(const Duration(milliseconds: 700));
+
+    if (!mounted) return;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -47,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFF080B0F),
+        backgroundColor: const Color(0xFF070A0D),
         body: Stack(
           children: [
             Positioned.fill(
@@ -63,8 +74,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withOpacity(.25),
-                      const Color(0xFF080B0F).withOpacity(.94),
+                      Colors.black.withOpacity(0.18),
+                      const Color(0xFF070A0D).withOpacity(0.96),
                     ],
                   ),
                 ),
@@ -83,15 +94,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: Column(
                     children: [
-                      const SizedBox(height: 45),
+                      const SizedBox(height: 48),
 
                       // شعار الفهد
                       Container(
-                        width: 115,
-                        height: 115,
+                        width: 125,
+                        height: 125,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF151D24),
+                          color: const Color(0xFF111820),
                           border: Border.all(
                             color: const Color(0xFFD4AF37),
                             width: 2,
@@ -99,9 +110,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           boxShadow: [
                             BoxShadow(
                               color: const Color(0xFFD4AF37)
-                                  .withOpacity(.25),
-                              blurRadius: 30,
-                              spreadRadius: 4,
+                                  .withOpacity(0.22),
+                              blurRadius: 35,
+                              spreadRadius: 5,
                             ),
                           ],
                         ),
@@ -109,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Text(
                             '🐆',
                             style: TextStyle(
-                              fontSize: 58,
+                              fontSize: 62,
                             ),
                           ),
                         ),
@@ -121,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         'الفهد',
                         style: TextStyle(
                           color: Color(0xFFD4AF37),
-                          fontSize: 38,
+                          fontSize: 40,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -133,11 +144,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 15,
-                          letterSpacing: 1.2,
+                          letterSpacing: 1.3,
                         ),
                       ),
 
-                      const SizedBox(height: 50),
+                      const SizedBox(height: 48),
 
                       const Align(
                         alignment: Alignment.centerRight,
@@ -145,18 +156,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           'تسجيل الدخول',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 26,
+                            fontSize: 27,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 9),
+                      const SizedBox(height: 8),
 
                       const Align(
                         alignment: Alignment.centerRight,
                         child: Text(
-                          'أدخل رقم هاتفك بترميز الدولة للمتابعة',
+                          'أدخل رقم هاتفك للبدء في استخدام الفهد',
                           style: TextStyle(
                             color: Colors.white60,
                             fontSize: 14,
@@ -166,11 +177,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       const SizedBox(height: 25),
 
+                      // رقم الهاتف
                       Row(
                         children: [
                           Container(
                             height: 58,
-                            width: 92,
+                            width: 94,
                             decoration: BoxDecoration(
                               color: const Color(0xFF151D24),
                               borderRadius: BorderRadius.circular(16),
@@ -232,11 +244,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ],
                                 onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() {
-                                      _countryCode = value;
-                                    });
-                                  }
+                                  if (value == null) return;
+
+                                  setState(() {
+                                    _countryCode = value;
+                                  });
                                 },
                               ),
                             ),
@@ -257,11 +269,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: TextField(
                                 controller: _phoneController,
                                 keyboardType: TextInputType.phone,
+                                textDirection: TextDirection.ltr,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 17,
                                 ),
-                                textDirection: TextDirection.ltr,
                                 decoration: const InputDecoration(
                                   hintText: 'رقم الهاتف',
                                   hintStyle: TextStyle(
@@ -282,31 +294,48 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       const SizedBox(height: 28),
 
+                      // زر الدخول
                       SizedBox(
                         width: double.infinity,
                         height: 58,
                         child: ElevatedButton(
-                          onPressed: _login,
+                          onPressed: _isLoading ? null : _login,
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
                                 const Color(0xFFD4AF37),
+                            disabledBackgroundColor:
+                                const Color(0xFF806A20),
                             foregroundColor: Colors.black,
                             elevation: 8,
                             shadowColor:
                                 const Color(0xFFD4AF37)
-                                    .withOpacity(.3),
+                                    .withOpacity(0.3),
                             shape: RoundedRectangleBorder(
                               borderRadius:
                                   BorderRadius.circular(18),
                             ),
                           ),
-                          child: const Text(
-                            'دخول / تسجيل',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child:
+                                      CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor:
+                                        AlwaysStoppedAnimation<
+                                            Color>(
+                                      Colors.black,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'دخول / تسجيل',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
                       ),
 
@@ -322,7 +351,41 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 35),
+
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFD4AF37),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'الفهد • خصوصية • أمان',
+                            style: TextStyle(
+                              color: Colors.white30,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFD4AF37),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 25),
                     ],
                   ),
                 ),
@@ -340,16 +403,16 @@ class LeopardBackgroundPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..style = PaintingStyle.fill
-      ..color = const Color(0xFFD4AF37).withOpacity(.035);
+      ..color = const Color(0xFFD4AF37).withOpacity(0.035);
 
     final positions = [
-      Offset(size.width * .12, size.height * .16),
-      Offset(size.width * .78, size.height * .20),
-      Offset(size.width * .25, size.height * .42),
-      Offset(size.width * .82, size.height * .48),
-      Offset(size.width * .12, size.height * .68),
-      Offset(size.width * .72, size.height * .76),
-      Offset(size.width * .35, size.height * .88),
+      Offset(size.width * 0.12, size.height * 0.16),
+      Offset(size.width * 0.78, size.height * 0.20),
+      Offset(size.width * 0.25, size.height * 0.42),
+      Offset(size.width * 0.82, size.height * 0.48),
+      Offset(size.width * 0.12, size.height * 0.68),
+      Offset(size.width * 0.72, size.height * 0.76),
+      Offset(size.width * 0.35, size.height * 0.88),
     ];
 
     for (final position in positions) {
@@ -358,7 +421,7 @@ class LeopardBackgroundPainter extends CustomPainter {
       final innerPaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 5
-        ..color = const Color(0xFFD4AF37).withOpacity(.055);
+        ..color = const Color(0xFFD4AF37).withOpacity(0.055);
 
       canvas.drawCircle(position, 25, innerPaint);
 
@@ -378,11 +441,11 @@ class LeopardBackgroundPainter extends CustomPainter {
     final goldPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
-      ..color = const Color(0xFFD4AF37).withOpacity(.08);
+      ..color = const Color(0xFFD4AF37).withOpacity(0.08);
 
     canvas.drawCircle(
-      Offset(size.width * .5, size.height * .34),
-      size.width * .42,
+      Offset(size.width * 0.5, size.height * 0.34),
+      size.width * 0.42,
       goldPaint,
     );
   }
