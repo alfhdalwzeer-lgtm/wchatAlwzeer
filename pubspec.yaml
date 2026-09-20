@@ -1,23 +1,27 @@
-name: wchat_alwzeer
-description: "A fresh messaging app - wchatAlwzeer"
-publish_to: 'none'
+name: alwazirchat
+description: Al-Wazir Chat - الفهد
+publish_to: "none"
+
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.8.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.6
-  image_picker: ^1.0.7      # ميزة التقاط الصور بالكاميرا
-  record: ^5.0.0            # ميزة التسجيل الصوتي
-  path_provider: ^2.1.2     # حفظ الملفات الصوتية
+
+  cupertino_icons: ^1.0.8
+
+  # قاعدة البيانات المحلية
+  sqflite: ^2.4.2
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
 
-flutter: 
+  flutter_lints: ^6.0.0
+
+flutter:
   uses-material-design: true
