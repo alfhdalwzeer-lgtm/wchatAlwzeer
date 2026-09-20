@@ -23,12 +23,23 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL UNIQUE,
+        createdAt INTEGER NOT NULL
+      )
+    ''');
+
     await db.execute('''
       CREATE TABLE messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +59,113 @@ class DatabaseHelper {
     ''');
   }
 
-  String createChatId(String user1, String user2) {
+  Future<void> _onUpgrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          userId TEXT NOT NULL UNIQUE,
+          name TEXT NOT NULL,
+          phone TEXT NOT NULL UNIQUE,
+          createdAt INTEGER NOT NULL
+        )
+      ''');
+    }
+  }
+
+  // =========================
+  // المستخدمون
+  // =========================
+
+  Future<int> createUser({
+    required String userId,
+    required String name,
+    required String phone,
+  }) async {
+    final db = await database;
+
+    return db.insert(
+      'users',
+      {
+        'userId': userId,
+        'name': name,
+        'phone': phone,
+        'createdAt': DateTime.now().millisecondsSinceEpoch,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<Map<String, dynamic>?> getUser(
+    String userId,
+  ) async {
+    final db = await database;
+
+    final result = await db.query(
+      'users',
+      where: 'userId = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+
+    if (result.isEmpty) {
+      return null;
+    }
+
+    return result.first;
+  }
+
+  Future<Map<String, dynamic>?> getUserByPhone(
+    String phone,
+  ) async {
+    final db = await database;
+
+    final result = await db.query(
+      'users',
+      where: 'phone = ?',
+      whereArgs: [phone],
+      limit: 1,
+    );
+
+    if (result.isEmpty) {
+      return null;
+    }
+
+    return result.first;
+  }
+
+  Future<List<Map<String, dynamic>>> getAllUsers({
+    String? excludeUserId,
+  }) async {
+    final db = await database;
+
+    if (excludeUserId == null) {
+      return db.query(
+        'users',
+        orderBy: 'createdAt DESC',
+      );
+    }
+
+    return db.query(
+      'users',
+      where: 'userId != ?',
+      whereArgs: [excludeUserId],
+      orderBy: 'createdAt DESC',
+    );
+  }
+
+  // =========================
+  // المحادثات
+  // =========================
+
+  String createChatId(
+    String user1,
+    String user2,
+  ) {
     final users = [user1, user2]..sort();
     return '${users[0]}_${users[1]}';
   }
@@ -90,13 +207,12 @@ class DatabaseHelper {
     );
   }
 
-  /// جلب آخر رسالة من كل محادثة
   Future<List<Map<String, dynamic>>> getChatSummaries(
     String currentUserId,
   ) async {
     final db = await database;
 
-    final result = await db.rawQuery('''
+    return db.rawQuery('''
       SELECT
         m.chatId,
         m.text,
@@ -114,11 +230,11 @@ class DatabaseHelper {
       AND m.createdAt = latest.latestTime
       ORDER BY m.createdAt DESC
     ''');
-
-    return result;
   }
 
-  Future<void> markMessagesAsRead(String chatId) async {
+  Future<void> markMessagesAsRead(
+    String chatId,
+  ) async {
     final db = await database;
 
     await db.update(
@@ -129,7 +245,9 @@ class DatabaseHelper {
     );
   }
 
-  Future<void> clearChat(String chatId) async {
+  Future<void> clearChat(
+    String chatId,
+  ) async {
     final db = await database;
 
     await db.delete(
