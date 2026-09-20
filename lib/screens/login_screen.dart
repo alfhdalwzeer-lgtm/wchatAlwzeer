@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/database_helper.dart';
 import 'main.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -9,29 +10,32 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _phoneController =
+      TextEditingController();
+
+  final TextEditingController _nameController =
+      TextEditingController();
+
+  final DatabaseHelper _database =
+      DatabaseHelper.instance;
 
   String _countryCode = '+967';
   bool _isLoading = false;
 
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    super.dispose();
-  }
+  final Color _gold = const Color(0xFFD4AF37);
+  final Color _background = const Color(0xFF080B0F);
 
   Future<void> _login() async {
+    final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
 
+    if (name.isEmpty) {
+      _showMessage('اكتب اسمك أولاً');
+      return;
+    }
+
     if (phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'أدخل رقم الهاتف أولاً',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
+      _showMessage('اكتب رقم الهاتف');
       return;
     }
 
@@ -39,18 +43,60 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // انتقال مؤقت للواجهة الرئيسية.
-    // لاحقًا سنربطه بتسجيل الدخول الحقيقي وحفظ الحساب.
-    await Future.delayed(const Duration(milliseconds: 700));
+    try {
+      final fullPhone = '$_countryCode$phone';
 
-    if (!mounted) return;
+      final existingUser =
+          await _database.getUserByPhone(fullPhone);
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const MainHomeScreen(),
+      if (existingUser == null) {
+        final userId =
+            'user_${DateTime.now().millisecondsSinceEpoch}';
+
+        await _database.createUser(
+          userId: userId,
+          name: name,
+          phone: fullPhone,
+        );
+      }
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const MainHomeScreen(),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      _showMessage(
+        'حدث خطأ أثناء حفظ الحساب',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF1E2A31),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
   }
 
   @override
@@ -58,336 +104,237 @@ class _LoginScreenState extends State<LoginScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFF070A0D),
+        backgroundColor: _background,
         body: Stack(
           children: [
             Positioned.fill(
               child: CustomPaint(
-                painter: LeopardBackgroundPainter(),
-              ),
-            ),
-
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.18),
-                      const Color(0xFF070A0D).withOpacity(0.96),
-                    ],
-                  ),
+                painter: LeopardBackgroundPainter(
+                  gold: _gold,
                 ),
               ),
             ),
 
             SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight:
-                        MediaQuery.of(context).size.height -
-                        MediaQuery.of(context).padding.top -
-                        MediaQuery.of(context).padding.bottom,
-                  ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 48),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 35,
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 25),
 
-                      // شعار الفهد
-                      Container(
-                        width: 125,
-                        height: 125,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFF111820),
-                          border: Border.all(
-                            color: const Color(0xFFD4AF37),
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFD4AF37)
-                                  .withOpacity(0.22),
-                              blurRadius: 35,
-                              spreadRadius: 5,
-                            ),
-                          ],
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _gold.withOpacity(0.12),
+                        border: Border.all(
+                          color: _gold,
+                          width: 2,
                         ),
-                        child: const Center(
-                          child: Text(
-                            '🐆',
-                            style: TextStyle(
-                              fontSize: 62,
-                            ),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          '🐆',
+                          style: TextStyle(
+                            fontSize: 48,
                           ),
                         ),
                       ),
+                    ),
 
-                      const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                      const Text(
-                        'الفهد',
+                    Text(
+                      'الفهد',
+                      style: TextStyle(
+                        color: _gold,
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    const Text(
+                      'Al-Wazir Chat',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+
+                    const SizedBox(height: 45),
+
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        'إنشاء حساب',
                         style: TextStyle(
-                          color: Color(0xFFD4AF37),
-                          fontSize: 40,
+                          color: Colors.white,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                    ),
 
-                      const SizedBox(height: 4),
+                    const SizedBox(height: 8),
 
-                      const Text(
-                        'Al-Wazir Chat',
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        'أدخل بياناتك للبدء باستخدام الفهد',
                         style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 15,
-                          letterSpacing: 1.3,
+                          color: Colors.white54,
+                          fontSize: 14,
                         ),
                       ),
+                    ),
 
-                      const SizedBox(height: 48),
+                    const SizedBox(height: 25),
 
-                      const Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          'تسجيل الدخول',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 27,
-                            fontWeight: FontWeight.bold,
+                    _inputField(
+                      controller: _nameController,
+                      hint: 'اسمك',
+                      icon: Icons.person_outline,
+                      keyboardType: TextInputType.name,
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    Row(
+                      children: [
+                        Container(
+                          height: 58,
+                          padding:
+                              const EdgeInsets.symmetric(
+                            horizontal: 10,
                           ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      const Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          'أدخل رقم هاتفك للبدء في استخدام الفهد',
-                          style: TextStyle(
-                            color: Colors.white60,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 25),
-
-                      // رقم الهاتف
-                      Row(
-                        children: [
-                          Container(
-                            height: 58,
-                            width: 94,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF151D24),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFF303C46),
-                              ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF151B20),
+                            borderRadius:
+                                BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white10,
                             ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _countryCode,
-                                dropdownColor:
-                                    const Color(0xFF18232C),
-                                iconEnabledColor:
-                                    const Color(0xFFD4AF37),
-                                isExpanded: true,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _countryCode,
+                              dropdownColor:
+                                  const Color(0xFF1E252B),
+                              style: const TextStyle(
+                                color: Colors.white,
+                              ),
+                              iconEnabledColor: _gold,
+                              items: const [
+                                DropdownMenuItem(
+                                  value: '+967',
+                                  child: Text('+967'),
                                 ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: '+967',
-                                    child: Text(
-                                      '+967',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: '+966',
-                                    child: Text(
-                                      '+966',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: '+971',
-                                    child: Text(
-                                      '+971',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: '+20',
-                                    child: Text(
-                                      '+20',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                onChanged: (value) {
-                                  if (value == null) return;
+                                DropdownMenuItem(
+                                  value: '+966',
+                                  child: Text('+966'),
+                                ),
+                                DropdownMenuItem(
+                                  value: '+971',
+                                  child: Text('+971'),
+                                ),
+                                DropdownMenuItem(
+                                  value: '+20',
+                                  child: Text('+20'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value == null) return;
 
-                                  setState(() {
-                                    _countryCode = value;
-                                  });
-                                },
-                              ),
+                                setState(() {
+                                  _countryCode = value;
+                                });
+                              },
                             ),
                           ),
+                        ),
 
-                          const SizedBox(width: 10),
+                        const SizedBox(width: 10),
 
-                          Expanded(
-                            child: Container(
-                              height: 58,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF151D24),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: const Color(0xFF303C46),
+                        Expanded(
+                          child: _inputField(
+                            controller: _phoneController,
+                            hint: 'رقم الهاتف',
+                            icon: Icons.phone_outlined,
+                            keyboardType:
+                                TextInputType.phone,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 58,
+                      child: ElevatedButton(
+                        onPressed:
+                            _isLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _gold,
+                          foregroundColor: Colors.black,
+                          disabledBackgroundColor:
+                              _gold.withOpacity(0.5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(18),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 25,
+                                height: 25,
+                                child:
+                                    CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : const Text(
+                                'دخول / تسجيل',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight:
+                                      FontWeight.bold,
                                 ),
                               ),
-                              child: TextField(
-                                controller: _phoneController,
-                                keyboardType: TextInputType.phone,
-                                textDirection: TextDirection.ltr,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 17,
-                                ),
-                                decoration: const InputDecoration(
-                                  hintText: 'رقم الهاتف',
-                                  hintStyle: TextStyle(
-                                    color: Colors.white38,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding:
-                                      EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 17,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
                       ),
+                    ),
 
-                      const SizedBox(height: 28),
+                    const SizedBox(height: 22),
 
-                      // زر الدخول
-                      SizedBox(
-                        width: double.infinity,
-                        height: 58,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                const Color(0xFFD4AF37),
-                            disabledBackgroundColor:
-                                const Color(0xFF806A20),
-                            foregroundColor: Colors.black,
-                            elevation: 8,
-                            shadowColor:
-                                const Color(0xFFD4AF37)
-                                    .withOpacity(0.3),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(18),
-                            ),
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child:
-                                      CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    valueColor:
-                                        AlwaysStoppedAnimation<
-                                            Color>(
-                                      Colors.black,
-                                    ),
-                                  ),
-                                )
-                              : const Text(
-                                  'دخول / تسجيل',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                        ),
+                    const Text(
+                      'باستمرارك أنت توافق على شروط الاستخدام وسياسة الخصوصية',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white38,
+                        fontSize: 12,
                       ),
+                    ),
 
-                      const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                      const Text(
-                        'بالضغط على دخول، أنت توافق على شروط الاستخدام وسياسة الخصوصية',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white38,
-                          fontSize: 11,
-                          height: 1.5,
-                        ),
+                    Text(
+                      'الفهد • خصوصية • أمان',
+                      style: TextStyle(
+                        color: _gold.withOpacity(0.7),
+                        fontSize: 12,
                       ),
-
-                      const SizedBox(height: 35),
-
-                      Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFD4AF37),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'الفهد • خصوصية • أمان',
-                            style: TextStyle(
-                              color: Colors.white30,
-                              fontSize: 11,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFD4AF37),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 25),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -396,62 +343,89 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
+  Widget _inputField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    required TextInputType keyboardType,
+  }) {
+    return Container(
+      height: 58,
+      decoration: BoxDecoration(
+        color: const Color(0xFF151B20),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white10,
+        ),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        textDirection: TextDirection.rtl,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+        ),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(
+            color: Colors.white38,
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: _gold,
+          ),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(
+            horizontal: 15,
+            vertical: 17,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class LeopardBackgroundPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = const Color(0xFFD4AF37).withOpacity(0.035);
+  final Color gold;
 
-    final positions = [
-      Offset(size.width * 0.12, size.height * 0.16),
-      Offset(size.width * 0.78, size.height * 0.20),
-      Offset(size.width * 0.25, size.height * 0.42),
-      Offset(size.width * 0.82, size.height * 0.48),
-      Offset(size.width * 0.12, size.height * 0.68),
-      Offset(size.width * 0.72, size.height * 0.76),
-      Offset(size.width * 0.35, size.height * 0.88),
+  LeopardBackgroundPainter({
+    required this.gold,
+  });
+
+  @override
+  void paint(
+    Canvas canvas,
+    Size size,
+  ) {
+    final paint = Paint()
+      ..color = gold.withOpacity(0.025)
+      ..style = PaintingStyle.fill;
+
+    final spots = [
+      Offset(size.width * 0.12, size.height * 0.18),
+      Offset(size.width * 0.82, size.height * 0.25),
+      Offset(size.width * 0.25, size.height * 0.55),
+      Offset(size.width * 0.78, size.height * 0.68),
+      Offset(size.width * 0.15, size.height * 0.86),
+      Offset(size.width * 0.88, size.height * 0.9),
     ];
 
-    for (final position in positions) {
-      canvas.drawCircle(position, 42, paint);
-
-      final innerPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5
-        ..color = const Color(0xFFD4AF37).withOpacity(0.055);
-
-      canvas.drawCircle(position, 25, innerPaint);
-
+    for (final spot in spots) {
       canvas.drawCircle(
-        position.translate(18, -12),
-        12,
-        innerPaint,
-      );
-
-      canvas.drawCircle(
-        position.translate(-15, 14),
-        10,
-        innerPaint,
+        spot,
+        55,
+        paint,
       );
     }
-
-    final goldPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = const Color(0xFFD4AF37).withOpacity(0.08);
-
-    canvas.drawCircle(
-      Offset(size.width * 0.5, size.height * 0.34),
-      size.width * 0.42,
-      goldPaint,
-    );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
+  bool shouldRepaint(
+    covariant LeopardBackgroundPainter oldDelegate,
+  ) {
+    return oldDelegate.gold != gold;
   }
 }
