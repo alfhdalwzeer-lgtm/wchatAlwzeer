@@ -119,7 +119,9 @@ class _ChatsPageState extends State<ChatsPage> {
   }
 
   Future<void> _loadChats() async {
-    final chats = await _database.getChatSummaries(_currentUserId);
+    final chats = await _database.getChatSummaries(
+      _currentUserId,
+    );
 
     if (!mounted) return;
 
@@ -143,10 +145,12 @@ class _ChatsPageState extends State<ChatsPage> {
   String _formatTime(int? milliseconds) {
     if (milliseconds == null) return '';
 
-    final date = DateTime.fromMillisecondsSinceEpoch(milliseconds);
+    final date =
+        DateTime.fromMillisecondsSinceEpoch(milliseconds);
 
     final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
-    final minute = date.minute.toString().padLeft(2, '0');
+    final minute =
+        date.minute.toString().padLeft(2, '0');
     final period = date.hour >= 12 ? 'م' : 'ص';
 
     return '$hour:$minute $period';
@@ -165,6 +169,86 @@ class _ChatsPageState extends State<ChatsPage> {
     _loadChats();
   }
 
+  Future<void> _newChat() async {
+    final controller = TextEditingController();
+
+    final userName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            backgroundColor: const Color(0xFF1E252B),
+            title: const Text(
+              'محادثة جديدة',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              textDirection: TextDirection.rtl,
+              style: const TextStyle(
+                color: Colors.white,
+              ),
+              decoration: InputDecoration(
+                hintText: 'اكتب اسم المستخدم',
+                hintStyle: const TextStyle(
+                  color: Colors.white38,
+                ),
+                filled: true,
+                fillColor: const Color(0xFF10161B),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                prefixIcon: const Icon(
+                  Icons.person_outline,
+                  color: Color(0xFFD4AF37),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('إلغاء'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      const Color(0xFFD4AF37),
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: () {
+                  final name = controller.text.trim();
+
+                  if (name.isEmpty) {
+                    return;
+                  }
+
+                  Navigator.pop(dialogContext, name);
+                },
+                child: const Text(
+                  'بدء المحادثة',
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    controller.dispose();
+
+    if (!mounted || userName == null) return;
+
+    await _openChat(userName);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -180,7 +264,9 @@ class _ChatsPageState extends State<ChatsPage> {
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.camera_alt_outlined),
+            icon: const Icon(
+              Icons.camera_alt_outlined,
+            ),
           ),
           IconButton(
             onPressed: () {},
@@ -221,16 +307,17 @@ class _ChatsPageState extends State<ChatsPage> {
               )
             : _chats.isEmpty
                 ? ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      const SizedBox(height: 60),
-                      const Icon(
+                    physics:
+                        const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 60),
+                      Icon(
                         Icons.chat_bubble_outline,
                         color: Color(0xFFD4AF37),
                         size: 70,
                       ),
-                      const SizedBox(height: 20),
-                      const Center(
+                      SizedBox(height: 20),
+                      Center(
                         child: Text(
                           'لا توجد محادثات بعد',
                           style: TextStyle(
@@ -240,10 +327,10 @@ class _ChatsPageState extends State<ChatsPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      const Center(
+                      SizedBox(height: 8),
+                      Center(
                         child: Text(
-                          'ابدأ محادثة جديدة وستظهر هنا',
+                          'اضغط زر المحادثة لبدء محادثة جديدة',
                           style: TextStyle(
                             color: Colors.white54,
                             fontSize: 14,
@@ -253,13 +340,16 @@ class _ChatsPageState extends State<ChatsPage> {
                     ],
                   )
                 : ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
+                    physics:
+                        const AlwaysScrollableScrollPhysics(),
                     itemCount: _chats.length,
                     itemBuilder: (context, index) {
                       final chat = _chats[index];
 
-                      final userName = _otherUser(chat);
-                      final text = chat['text']?.toString() ?? '';
+                      final userName =
+                          _otherUser(chat);
+                      final text =
+                          chat['text']?.toString() ?? '';
                       final time = _formatTime(
                         chat['createdAt'] as int?,
                       );
@@ -268,7 +358,8 @@ class _ChatsPageState extends State<ChatsPage> {
                         name: userName,
                         message: text,
                         time: time,
-                        onTap: () => _openChat(userName),
+                        onTap: () =>
+                            _openChat(userName),
                       );
                     },
                   ),
@@ -276,15 +367,7 @@ class _ChatsPageState extends State<ChatsPage> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFFD4AF37),
         foregroundColor: Colors.black,
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'ميزة بدء محادثة جديدة ستكون في الخطوة القادمة',
-              ),
-            ),
-          );
-        },
+        onPressed: _newChat,
         child: const Icon(Icons.chat),
       ),
     );
@@ -302,10 +385,10 @@ class _ChatsPageState extends State<ChatsPage> {
         horizontal: 14,
         vertical: 5,
       ),
-      leading: CircleAvatar(
+      leading: const CircleAvatar(
         radius: 27,
-        backgroundColor: const Color(0xFFD4AF37),
-        child: const Text(
+        backgroundColor: Color(0xFFD4AF37),
+        child: Text(
           '🐆',
           style: TextStyle(fontSize: 24),
         ),
@@ -429,10 +512,10 @@ class StatusPage extends StatelessWidget {
       body: ListView(
         children: [
           ListTile(
-            leading: CircleAvatar(
+            leading: const CircleAvatar(
               radius: 28,
-              backgroundColor: const Color(0xFFD4AF37),
-              child: const Text(
+              backgroundColor: Color(0xFFD4AF37),
+              child: Text(
                 '🐆',
                 style: TextStyle(fontSize: 24),
               ),
