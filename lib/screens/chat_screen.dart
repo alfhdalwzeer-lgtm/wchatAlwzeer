@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/database_helper.dart';
 
 class ChatScreen extends StatefulWidget {
   final String userName;
@@ -13,75 +14,68 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _messageController =
-      TextEditingController();
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
-  final ScrollController _scrollController =
-      ScrollController();
+  final DatabaseHelper _database = DatabaseHelper.instance;
 
-  bool _showMediaMenu = false;
-  bool _showStickers = false;
+  final String _myUserId = 'current_user';
+  late String _otherUserId;
+  late String _chatId;
 
-  final List<_ChatMessage> _messages = [
-    _ChatMessage(
-      text: 'السلام عليكم ورحمة الله وبركاته',
-      isMe: false,
-      time: '10:20 م',
-      isRead: true,
-    ),
-    _ChatMessage(
-      text: 'وعليكم السلام ورحمة الله وبركاته 🌹',
-      isMe: true,
-      time: '10:21 م',
-      isRead: true,
-    ),
-    _ChatMessage(
-      text: 'أهلاً بك في الفهد 🐆',
-      isMe: false,
-      time: '10:21 م',
-      isRead: true,
-    ),
-    _ChatMessage(
-      text: 'تطبيق الفهد جاهز للمحادثة',
-      isMe: true,
-      time: '10:22 م',
-      isRead: true,
-    ),
-  ];
+  List<Map<String, dynamic>> _messages = [];
+  bool _loading = true;
+
+  final Color _gold = const Color(0xFFD4AF37);
+  final Color _background = const Color(0xFF080B0F);
+  final Color _incoming = const Color(0xFF1F2C34);
+  final Color _outgoing = const Color(0xFF005C4B);
 
   @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+
+    _otherUserId = widget.userName;
+    _chatId = _database.createChatId(
+      _myUserId,
+      _otherUserId,
+    );
+
+    _loadMessages();
   }
 
-  void _sendMessage() {
-    final text = _messageController.text.trim();
+  Future<void> _loadMessages() async {
+    final messages = await _database.getMessages(_chatId);
 
-    if (text.isEmpty) return;
+    if (!mounted) return;
 
     setState(() {
-      _messages.add(
-        _ChatMessage(
-          text: text,
-          isMe: true,
-          time: _currentTime(),
-          isRead: true,
-        ),
-      );
-
-      _messageController.clear();
-      _showMediaMenu = false;
-      _showStickers = false;
+      _messages = messages;
+      _loading = false;
     });
+
+    await _database.markMessagesAsRead(_chatId);
 
     _scrollToBottom();
   }
 
-  String _currentTime() {
-    final now = TimeOfDay.now();
-    return now.format(context);
+  Future<void> _sendMessage() async {
+    final text = _controller.text.trim();
+
+    if (text.isEmpty) return;
+
+    _controller.clear();
+
+    await _database.insertMessage(
+      chatId: _chatId,
+      senderId: _myUserId,
+      receiverId: _otherUserId,
+      text: text,
+      isMe: true,
+      isRead: true,
+    );
+
+    await _loadMessages();
   }
 
   void _scrollToBottom() {
@@ -90,59 +84,182 @@ class _ChatScreenState extends State<ChatScreen> {
 
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,
       );
+    });
+  }
+
+  Future<void> _clearChat() async {
+    await _database.clearChat(_chatId);
+
+    if (!mounted) return;
+
+    setState(() {
+      _messages.clear();
     });
   }
 
   void _showMoreMenu() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF151D24),
+      backgroundColor: const Color(0xFF151B20),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(24),
         ),
       ),
       builder: (context) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: SafeArea(
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+
+              ListTile(
+                leading: Icon(
+                  Icons.delete_outline,
+                  color: Colors.redAccent,
+                ),
+                title: const Text(
+                  'مسح المحادثة',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () async {
+                  Navigator.pop(context);
+
+                  final confirmed = await showDialog<bool>(
+                    context: this.context,
+                    builder: (context) {
+                      return AlertDialog(
+                        backgroundColor: const Color(0xFF1E252B),
+                        title: const Text(
+                          'مسح المحادثة؟',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        content: const Text(
+                          'سيتم حذف الرسائل المحفوظة في هذه المحادثة.',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context, false);
+                            },
+                            child: const Text('إلغاء'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context, true);
+                            },
+                            child: const Text(
+                              'مسح',
+                              style: TextStyle(
+                                color: Colors.redAccent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (confirmed == true) {
+                    await _clearChat();
+                  }
+                },
+              ),
+
+              ListTile(
+                leading: Icon(
+                  Icons.close,
+                  color: _gold,
+                ),
+                title: const Text(
+                  'إغلاق',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMediaMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF151B20),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(26),
+        ),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(height: 8),
                 Container(
                   width: 45,
-                  height: 4,
+                  height: 5,
                   decoration: BoxDecoration(
                     color: Colors.white24,
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                const SizedBox(height: 15),
-                _menuItem(
-                  Icons.search,
-                  'بحث في المحادثة',
+                const SizedBox(height: 20),
+
+                const Text(
+                  'مركز الوسائط',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                _menuItem(
-                  Icons.notifications_none,
-                  'كتم الإشعارات',
+
+                const SizedBox(height: 20),
+
+                Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceAround,
+                  children: [
+                    _mediaButton(
+                      Icons.camera_alt,
+                      'الكاميرا',
+                    ),
+                    _mediaButton(
+                      Icons.photo_library,
+                      'المعرض',
+                    ),
+                    _mediaButton(
+                      Icons.videocam,
+                      'فيديو',
+                    ),
+                    _mediaButton(
+                      Icons.insert_drive_file,
+                      'ملف',
+                    ),
+                  ],
                 ),
-                _menuItem(
-                  Icons.lock_outline,
-                  'قفل المحادثة',
+
+                const SizedBox(height: 20),
+
+                _mediaButton(
+                  Icons.emoji_emotions,
+                  'الملصقات',
                 ),
-                _menuItem(
-                  Icons.cleaning_services_outlined,
-                  'مسح المحادثة',
-                ),
-                _menuItem(
-                  Icons.block,
-                  'حظر جهة الاتصال',
-                ),
-                const SizedBox(height: 15),
+
+                const SizedBox(height: 10),
               ],
             ),
           ),
@@ -151,367 +268,44 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _menuItem(IconData icon, String title) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: const Color(0xFFD4AF37),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 15,
-        ),
-      ),
+  Widget _mediaButton(
+    IconData icon,
+    String title,
+  ) {
+    return InkWell(
       onTap: () {
         Navigator.pop(context);
-      },
-    );
-  }
-
-  void _openMediaMenu() {
-    setState(() {
-      _showMediaMenu = !_showMediaMenu;
-      _showStickers = false;
-    });
-  }
-
-  void _openStickers() {
-    setState(() {
-      _showStickers = !_showStickers;
-      _showMediaMenu = false;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: const Color(0xFF080B0F),
-        appBar: _buildAppBar(),
-        body: Column(
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  _buildMessages(),
-                  if (_showMediaMenu) _buildMediaPanel(),
-                  if (_showStickers) _buildStickerPanel(),
-                ],
-              ),
-            ),
-            _buildComposer(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: const Color(0xFF1E2A31),
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      titleSpacing: 0,
-      title: Row(
-        children: [
-          IconButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            icon: const Icon(
-              Icons.arrow_forward,
-              color: Colors.white,
-            ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$title ستكون متاحة في الخطوة القادمة'),
           ),
-          Container(
-            width: 43,
-            height: 43,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF151D24),
-              border: Border.all(
-                color: const Color(0xFFD4AF37),
-                width: 1.3,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                widget.userName == 'الفهد' ? '🐆' : '👤',
-                style: const TextStyle(fontSize: 23),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: InkWell(
-              onTap: () {},
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
-                children: [
-                  Text(
-                    widget.userName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'متصل الآن',
-                    style: TextStyle(
-                      color: Color(0xFF9CCC65),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.videocam_outlined,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.call_outlined,
-              color: Colors.white,
-              size: 22,
-            ),
-          ),
-          IconButton(
-            onPressed: _showMoreMenu,
-            icon: const Icon(
-              Icons.more_vert,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessages() {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(
-        12,
-        18,
-        12,
-        18,
-      ),
-      itemCount: _messages.length,
-      itemBuilder: (context, index) {
-        final message = _messages[index];
-
-        return _MessageBubble(
-          message: message,
         );
       },
-    );
-  }
-
-  Widget _buildComposer() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        8,
-        8,
-        8,
-        9,
-      ),
-      decoration: const BoxDecoration(
-        color: Color(0xFF111820),
-      ),
-      child: SafeArea(
-        top: false,
+      borderRadius: BorderRadius.circular(18),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
         child: Column(
           children: [
-            Row(
-              crossAxisAlignment:
-                  CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Container(
-                    constraints: const BoxConstraints(
-                      minHeight: 50,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E2A31),
-                      borderRadius: BorderRadius.circular(26),
-                      border: Border.all(
-                        color: const Color(0xFF2C3942),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: _openStickers,
-                          icon: const Icon(
-                            Icons.emoji_emotions_outlined,
-                            color: Colors.white54,
-                          ),
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _messageController,
-                            textDirection: TextDirection.rtl,
-                            minLines: 1,
-                            maxLines: 5,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                            ),
-                            onTap: () {
-                              setState(() {
-                                _showMediaMenu = false;
-                                _showStickers = false;
-                              });
-                            },
-                            decoration:
-                                const InputDecoration(
-                              hintText: 'اكتب رسالة...',
-                              hintStyle: TextStyle(
-                                color: Colors.white38,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding:
-                                  EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _openMediaMenu,
-                          icon: const Icon(
-                            Icons.attach_file,
-                            color: Colors.white54,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(
-                            Icons.camera_alt_outlined,
-                            color: Colors.white54,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 7),
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFD4AF37),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    onPressed: _sendMessage,
-                    icon: const Icon(
-                      Icons.send,
-                      color: Colors.black,
-                      size: 22,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMediaPanel() {
-    return Positioned(
-      left: 12,
-      right: 12,
-      bottom: 12,
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: const Color(0xFF18232C),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: const Color(0xFFD4AF37).withOpacity(.25),
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black54,
-              blurRadius: 20,
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'مركز الوسائط',
-              style: TextStyle(
-                color: Color(0xFFD4AF37),
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: _gold.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Icon(
+                icon,
+                color: _gold,
+                size: 28,
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceAround,
-              children: [
-                _MediaButton(
-                  icon: Icons.camera_alt,
-                  title: 'الكاميرا',
-                  onTap: () {
-                    setState(() {
-                      _showMediaMenu = false;
-                    });
-                  },
-                ),
-                _MediaButton(
-                  icon: Icons.photo,
-                  title: 'المعرض',
-                  onTap: () {
-                    setState(() {
-                      _showMediaMenu = false;
-                    });
-                  },
-                ),
-                _MediaButton(
-                  icon: Icons.videocam,
-                  title: 'فيديو',
-                  onTap: () {
-                    setState(() {
-                      _showMediaMenu = false;
-                    });
-                  },
-                ),
-                _MediaButton(
-                  icon: Icons.insert_drive_file,
-                  title: 'ملف',
-                  onTap: () {
-                    setState(() {
-                      _showMediaMenu = false;
-                    });
-                  },
-                ),
-              ],
+            const SizedBox(height: 7),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+              ),
             ),
           ],
         ),
@@ -519,153 +313,80 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildStickerPanel() {
-    const stickers = [
-      '🐆',
-      '❤️',
-      '😂',
-      '😍',
-      '🔥',
-      '👍',
-      '👏',
-      '😊',
-      '😎',
-      '🤍',
-      '🌹',
-      '✨',
-    ];
+  Widget _buildMessage(
+    Map<String, dynamic> message,
+  ) {
+    final bool isMe = message['isMe'] == 1;
+    final String text = message['text']?.toString() ?? '';
 
-    return Positioned(
-      left: 8,
-      right: 8,
-      bottom: 8,
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: const Color(0xFF18232C),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: const Color(0xFFD4AF37).withOpacity(.25),
-          ),
-        ),
-        child: GridView.builder(
-          shrinkWrap: true,
-          itemCount: stickers.length,
-          gridDelegate:
-              const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 6,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-          ),
-          itemBuilder: (context, index) {
-            return InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {
-                _messageController.text +=
-                    stickers[index];
-
-                setState(() {
-                  _showStickers = false;
-                });
-              },
-              child: Center(
-                child: Text(
-                  stickers[index],
-                  style: const TextStyle(
-                    fontSize: 30,
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-// فقاعة الرسالة
-// ============================================================
-
-class _MessageBubble extends StatelessWidget {
-  final _ChatMessage message;
-
-  const _MessageBubble({
-    required this.message,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bubbleColor = message.isMe
-        ? const Color(0xFF075E54)
-        : const Color(0xFF1F2C34);
+    final createdAt = message['createdAt'] as int?;
+    final time = createdAt == null
+        ? ''
+        : _formatTime(
+            DateTime.fromMillisecondsSinceEpoch(
+              createdAt,
+            ),
+          );
 
     return Align(
-      alignment: message.isMe
-          ? Alignment.centerRight
-          : Alignment.centerLeft,
+      alignment:
+          isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth:
-              MediaQuery.of(context).size.width * .78,
+          maxWidth: MediaQuery.of(context).size.width * 0.78,
         ),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.fromLTRB(
-          12,
-          8,
-          10,
-          6,
+        margin: EdgeInsets.only(
+          left: isMe ? 55 : 8,
+          right: isMe ? 8 : 55,
+          top: 4,
+          bottom: 4,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 13,
+          vertical: 9,
         ),
         decoration: BoxDecoration(
-          color: bubbleColor,
+          color: isMe ? _outgoing : _incoming,
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(15),
-            topRight: const Radius.circular(15),
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
             bottomLeft: Radius.circular(
-              message.isMe ? 15 : 3,
+              isMe ? 16 : 4,
             ),
             bottomRight: Radius.circular(
-              message.isMe ? 3 : 15,
+              isMe ? 4 : 16,
             ),
           ),
-          border: message.isMe
-              ? Border.all(
-                  color: const Color(0xFF0B7165),
-                  width: .5,
-                )
-              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment:
-              CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Flexible(
               child: Text(
-                message.text,
+                text,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 15,
+                  fontSize: 16,
                   height: 1.35,
                 ),
               ),
             ),
             const SizedBox(width: 8),
             Text(
-              message.time,
+              time,
               style: const TextStyle(
                 color: Colors.white54,
-                fontSize: 9,
+                fontSize: 10,
               ),
             ),
-            if (message.isMe) ...[
+            if (isMe) ...[
               const SizedBox(width: 3),
               Icon(
                 Icons.done_all,
                 size: 15,
-                color: message.isRead
-                    ? const Color(0xFF53BDEB)
+                color: message['isRead'] == 1
+                    ? Colors.lightBlueAccent
                     : Colors.white54,
               ),
             ],
@@ -674,75 +395,254 @@ class _MessageBubble extends StatelessWidget {
       ),
     );
   }
-}
 
-// ============================================================
-// زر الوسائط
-// ============================================================
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour % 12 == 0
+        ? 12
+        : dateTime.hour % 12;
 
-class _MediaButton extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
+    final minute =
+        dateTime.minute.toString().padLeft(2, '0');
 
-  const _MediaButton({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
+    final period = dateTime.hour >= 12 ? 'م' : 'ص';
+
+    return '$hour:$minute $period';
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
-      child: Column(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: const Color(0xFF111820),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color:
-                    const Color(0xFFD4AF37).withOpacity(.35),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: _background,
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF1E2A31),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+          titleSpacing: 0,
+          title: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: _gold,
+                child: const Text(
+                  '🐆',
+                  style: TextStyle(fontSize: 21),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.userName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Text(
+                    'متصل الآن',
+                    style: TextStyle(
+                      color: Colors.greenAccent,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(
+                Icons.videocam_outlined,
+                color: Colors.white,
               ),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFFD4AF37),
-              size: 24,
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(
+                Icons.call_outlined,
+                color: Colors.white,
+              ),
             ),
-          ),
-          const SizedBox(height: 7),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 11,
+            IconButton(
+              onPressed: _showMoreMenu,
+              icon: const Icon(
+                Icons.more_vert,
+                color: Colors.white,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: _loading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: _gold,
+                      ),
+                    )
+                  : _messages.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.lock_outline,
+                                color: _gold,
+                                size: 42,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'لا توجد رسائل بعد',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'ابدأ المحادثة الآن',
+                                style: TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 12,
+                          ),
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) {
+                            return _buildMessage(
+                              _messages[index],
+                            );
+                          },
+                        ),
+            ),
+
+            SafeArea(
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 7,
+                ),
+                color: const Color(0xFF080B0F),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E252B),
+                          borderRadius:
+                              BorderRadius.circular(26),
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              onPressed: _showMediaMenu,
+                              icon: Icon(
+                                Icons.add,
+                                color: _gold,
+                              ),
+                            ),
+                            Expanded(
+                              child: TextField(
+                                controller: _controller,
+                                textDirection:
+                                    TextDirection.rtl,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                                minLines: 1,
+                                maxLines: 5,
+                                decoration:
+                                    const InputDecoration(
+                                  hintText:
+                                      'اكتب رسالة...',
+                                  hintStyle: TextStyle(
+                                    color: Colors.white38,
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding:
+                                      EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                onSubmitted: (_) {
+                                  _sendMessage();
+                                },
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {},
+                              icon: const Icon(
+                                Icons.emoji_emotions_outlined,
+                                color: Colors.white54,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {},
+                              icon: const Icon(
+                                Icons.camera_alt_outlined,
+                                color: Colors.white54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: _gold,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        onPressed: _sendMessage,
+                        icon: const Icon(
+                          Icons.send,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-}
-
-// ============================================================
-// نموذج الرسالة المحلي
-// ============================================================
-
-class _ChatMessage {
-  final String text;
-  final bool isMe;
-  final String time;
-  final bool isRead;
-
-  const _ChatMessage({
-    required this.text,
-    required this.isMe,
-    required this.time,
-    required this.isRead,
-  });
 }
