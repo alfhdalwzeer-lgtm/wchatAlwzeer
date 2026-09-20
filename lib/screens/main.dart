@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'chat_screen.dart';
 import 'profile_screen.dart';
+import 'login_screen.dart';
 
 void main() {
   runApp(const WchatAlwzeerApp());
@@ -22,7 +23,6 @@ class WchatAlwzeerApp extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: dark,
         primaryColor: gold,
-        fontFamily: 'sans',
         useMaterial3: true,
         colorScheme: const ColorScheme.dark(
           primary: gold,
@@ -30,7 +30,9 @@ class WchatAlwzeerApp extends StatelessWidget {
           surface: navy,
         ),
       ),
-      home: const MainHomeScreen(),
+
+      // يبدأ التطبيق من شاشة الفهد وتسجيل الدخول
+      home: const LoginScreen(),
     );
   }
 }
@@ -139,10 +141,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 }
 
-// ============================================================
-// الدردشات
-// ============================================================
-
 class ChatsPage extends StatelessWidget {
   const ChatsPage({super.key});
 
@@ -175,7 +173,6 @@ class ChatsPage extends StatelessWidget {
             showSearch: true,
           ),
         ),
-
         SliverToBoxAdapter(
           child: Container(
             margin: const EdgeInsets.fromLTRB(14, 12, 14, 16),
@@ -246,7 +243,6 @@ class ChatsPage extends StatelessWidget {
             ),
           ),
         ),
-
         const SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 18, vertical: 4),
@@ -260,7 +256,6 @@ class ChatsPage extends StatelessWidget {
             ),
           ),
         ),
-
         SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) {
@@ -280,10 +275,6 @@ class ChatsPage extends StatelessWidget {
     );
   }
 }
-
-// ============================================================
-// المجموعات
-// ============================================================
 
 class GroupsPage extends StatelessWidget {
   const GroupsPage({super.key});
@@ -337,10 +328,6 @@ class GroupsPage extends StatelessWidget {
   }
 }
 
-// ============================================================
-// المكالمات
-// ============================================================
-
 class CallsPage extends StatelessWidget {
   const CallsPage({super.key});
 
@@ -392,10 +379,6 @@ class CallsPage extends StatelessWidget {
     );
   }
 }
-
-// ============================================================
-// الحالة
-// ============================================================
 
 class StatusPage extends StatelessWidget {
   const StatusPage({super.key});
@@ -517,10 +500,6 @@ class StatusPage extends StatelessWidget {
   }
 }
 
-// ============================================================
-// الشريط العلوي
-// ============================================================
-
 Widget _topBar(
   BuildContext context, {
   required String title,
@@ -592,10 +571,6 @@ Widget _topBar(
     ),
   );
 }
-
-// ============================================================
-// عنصر المحادثة
-// ============================================================
 
 Widget _chatTile(
   BuildContext context, {
