@@ -1,6 +1,11 @@
 cd ~/wchatAlwzeerPro
 cat > lib/models/message_model.dart <<'EOF'
 class MessageModel {
+  final int? id;
+
+  // معرف المحادثة حتى لا تختلط رسائل المستخدمين
+  final String chatId;
+
   final String text;
   final bool isMe;
   final String time;
@@ -16,6 +21,8 @@ class MessageModel {
   final String? fileName;
 
   MessageModel({
+    this.id,
+    required this.chatId,
     required this.text,
     required this.isMe,
     required this.time,
