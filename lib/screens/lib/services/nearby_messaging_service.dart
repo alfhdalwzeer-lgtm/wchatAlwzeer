@@ -10,7 +10,6 @@ class NearbyMessagingService {
       NearbyMessagingService._();
 
   static const String serviceId = 'com.alwazir.chat.nearby';
-  static const String strategyName = 'P2P_CLUSTER';
 
   final Nearby _nearby = Nearby();
 
@@ -41,6 +40,7 @@ class NearbyMessagingService {
       final started = await _nearby.startAdvertising(
         userName,
         Strategy.P2P_CLUSTER,
+        serviceId: serviceId,
         onConnectionInitiated: (deviceId, connectionInfo) {
           _nearby.acceptConnection(
             deviceId,
@@ -94,17 +94,18 @@ class NearbyMessagingService {
       final started = await _nearby.startDiscovery(
         userName,
         Strategy.P2P_CLUSTER,
+        serviceId: serviceId,
         onEndpointFound: (
           String deviceId,
           String deviceName,
-          String serviceId,
+          String foundServiceId,
         ) {
           onDeviceFound(
             deviceId,
             deviceName,
           );
         },
-        onEndpointLost: (String deviceId) {},
+        onEndpointLost: (String? deviceId) {},
       );
 
       return started;
@@ -161,10 +162,12 @@ class NearbyMessagingService {
         utf8.encode(message),
       );
 
-      return await _nearby.sendBytesPayload(
+      await _nearby.sendBytesPayload(
         deviceId,
         data,
       );
+
+      return true;
     } catch (_) {
       return false;
     }
