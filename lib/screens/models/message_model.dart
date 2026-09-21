@@ -1,17 +1,28 @@
-enum MessageStatus { sent, delivered, read }
-
-class Message {
-  final String id;
-  final String senderId;
+cd ~/wchatAlwzeerPro
+cat > lib/models/message_model.dart <<'EOF'
+class MessageModel {
   final String text;
-  final DateTime timestamp;
-  final MessageStatus status;
+  final bool isMe;
+  final String time;
+  final bool isRead;
 
-  Message({
-    required this.id,
-    required this.senderId,
+  // نوع الرسالة: text / image / file
+  final String type;
+
+  // مسار الصورة أو الملف على الجهاز
+  final String? filePath;
+
+  // اسم الملف عند إرسال مستند
+  final String? fileName;
+
+  MessageModel({
     required this.text,
-    required this.timestamp,
-    this.status = MessageStatus.sent,
+    required this.isMe,
+    required this.time,
+    this.isRead = false,
+    this.type = 'text',
+    this.filePath,
+    this.fileName,
   });
 }
+EOF
