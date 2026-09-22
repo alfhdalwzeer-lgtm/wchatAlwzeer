@@ -13,13 +13,15 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
-  # قاعدة البيانات المحلية
+  # قاعدة البيانات المحلية والملفات
   sqflite: ^2.4.2
   path: ^1.9.1
-  nearby_connections: ^4.3.0
 
   # المراسلة بين الأجهزة القريبة بدون إنترنت
   nearby_connections: ^4.3.0
+
+  # الحفظ المحلي للرسائل والإعدادات
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
