@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 void main() {
   runApp(const AlWazirChatApp());
@@ -30,7 +32,7 @@ class MainHomeScreen extends StatefulWidget {
 }
 
 class _MainHomeScreenState extends State<MainHomeScreen> {
-  int _currentIndex = 3; // تبويب الدردشات افتراضياً
+  int _currentIndex = 3;
 
   final List<Widget> _screens = const [
     StatusScreen(),
@@ -107,7 +109,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 }
 
-// شاشة الدردشات الرئيسية
 class ChatsListScreen extends StatelessWidget {
   const ChatsListScreen({super.key});
 
@@ -125,11 +126,11 @@ class ChatsListScreen extends StatelessWidget {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           subtitle: const Text(
-            'وعليكم السلام! تطبيق ممتاز جداً.',
+            'اضغط لبدء المحادثة المحفوظة...',
             style: TextStyle(color: Colors.grey),
           ),
           trailing: const Text(
-            '10:01 ص',
+            'الآن',
             style: TextStyle(color: Colors.grey, fontSize: 12),
           ),
           onTap: () {
@@ -139,33 +140,68 @@ class ChatsListScreen extends StatelessWidget {
             );
           },
         ),
-        ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFFFFD700),
-            child: Icon(Icons.star, color: Color(0xFF111B21)),
-          ),
-          title: const Text(
-            'الفهد',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          subtitle: const Text(
-            'مرحباً بك في التطبيق',
-            style: TextStyle(color: Colors.grey),
-          ),
-          trailing: const Text(
-            '09:45 ص',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
-          ),
-          onTap: () {},
-        ),
       ],
     );
   }
 }
 
-// شاشة المحادثة التفصيلية
-class ChatDetailScreen extends StatelessWidget {
+// شاشة المحادثة مع ميزة الحفظ المحلي (Local Storage)
+class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
+
+  @override
+  State<ChatDetailScreen> createState() => _ChatDetailScreenState();
+}
+
+class _ChatDetailScreenState extends State<ChatDetailScreen> {
+  final TextEditingController _controller = TextEditingController();
+  List<Map<String, String>> _messages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+  }
+
+  // تحميل الرسائل المحفوظة محلياً
+  Future<void> _loadMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? messagesString = prefs.getString('saved_chat_messages');
+    if (messagesString != null) {
+      setState(() {
+        _messages = List<Map<String, String>>.from(
+          json.decode(messagesString).map((item) => Map<String, String>.from(item)),
+        );
+      });
+    } else {
+      // رسائل افتراضية أولية
+      _messages = [
+        {'sender': 'them', 'text': 'السلام عليكم، مرحباً بك في تطبيق الفهد'},
+        {'sender': 'me', 'text': 'وعليكم السلام! تم تفعيل الحفظ المحلي بنجاح.'},
+      ];
+      _saveMessages();
+    }
+  }
+
+  // حفظ الرسائل محلياً
+  Future<void> _saveMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setString('saved_chat_messages', json.encode(_messages));
+  }
+
+  void _sendMessage() {
+    if (_controller.text.trim().isEmpty) return;
+
+    setState(() {
+      _messages.add({
+        'sender': 'me',
+        'text': _controller.text.trim(),
+      });
+    });
+
+    _controller.clear();
+    _saveMessages(); // الحفظ الفوري
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +220,7 @@ class ChatDetailScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('مستخدم الفهد', style: TextStyle(fontSize: 16, color: Colors.white)),
-                Text('متصل الآن', style: TextStyle(fontSize: 12, color: Color(0xFFFFD700))),
+                Text('متصل الآن (محفوظ محلياً)', style: TextStyle(fontSize: 11, color: Color(0xFFFFD700))),
               ],
             ),
           ],
@@ -198,33 +234,28 @@ class ChatDetailScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: ListView(
+            child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final message = _messages[index];
+                final isMe = message['sender'] == 'me';
+                return Align(
+                  alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1F2C34),
+                      color: isMe ? const Color(0xFF005C4B) : const Color(0xFF1F2C34),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text('السلام عليكم، مرحباً بك في الفهد\n10:00 ص', style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF005C4B),
-                      borderRadius: BorderRadius.circular(8),
+                    child: Text(
+                      message['text'] ?? '',
+                      style: const TextStyle(color: Colors.white),
                     ),
-                    child: const Text('وعليكم السلام! تطبيق ممتاز جداً.\n10:01 ص', style: TextStyle(color: Colors.white)),
                   ),
-                ),
-              ],
+                );
+              },
             ),
           ),
           Container(
@@ -260,18 +291,20 @@ class ChatDetailScreen extends StatelessWidget {
                     );
                   },
                 ),
-                const Expanded(
+                Expanded(
                   child: TextField(
-                    decoration: InputDecoration(
+                    controller: _controller,
+                    decoration: const InputDecoration(
                       hintText: 'اكتب رسالة...',
                       hintStyle: TextStyle(color: Colors.grey),
                       border: InputBorder.none,
                     ),
+                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.mic, color: Color(0xFFFFD700)),
-                  onPressed: () {},
+                  icon: const Icon(Icons.send, color: Color(0xFFFFD700)),
+                  onPressed: _sendMessage,
                 ),
               ],
             ),
@@ -286,7 +319,7 @@ class ChatDetailScreen extends StatelessWidget {
       children: [
         CircleAvatar(
           backgroundColor: const Color(0xFF111B21),
-          child: Icon(icon, color: Color(0xFFFFD700)),
+          child: Icon(icon, color: const Color(0xFFFFD700)),
         ),
         const SizedBox(height: 5),
         Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
@@ -295,36 +328,11 @@ class ChatDetailScreen extends StatelessWidget {
   }
 }
 
-// شاشة الحالة
 class StatusScreen extends StatelessWidget {
   const StatusScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFFFFD700),
-            child: Icon(Icons.person, color: Color(0xFF111B21)),
-          ),
-          title: const Text('حالتي', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          subtitle: const Text('اضغط لإضافة حالة جديدة', style: TextStyle(color: Colors.grey)),
-        ),
-        const Divider(color: Colors.grey),
-        const Expanded(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.auto_awesome, color: Color(0xFFFFD700), size: 48),
-                SizedBox(height: 16),
-                Text('لا توجد حالات بعد', style: TextStyle(color: Colors.grey, fontSize: 16)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
+    return const Center(child: Text('شاشة الحالة', style: TextStyle(color: Colors.white)));
   }
 }
 
